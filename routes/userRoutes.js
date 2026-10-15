@@ -5,6 +5,7 @@ const {
     loginUser,
     getProfile,
     verifyEmail,
+    resendVerificationEmail,
     updateUserProfile,
     deleteUserAccount,
     uploadProfileImage,
@@ -19,6 +20,7 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.get("/verify-email", verifyEmail);
+router.post("/resend-verification", resendVerificationEmail);
 router.get("/profile", authenticateUser, getProfile);
 router.patch("/profile", authenticateUser, updateUserProfile);
 router.delete("/profile", authenticateUser, deleteUserAccount);

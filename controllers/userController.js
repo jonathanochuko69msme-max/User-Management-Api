@@ -282,6 +282,82 @@ const verifyEmail = async (req, res) => {
 };
 
 
+const resendVerificationEmail = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Email address is required"
+            });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        const user = await prisma.user.findUnique({
+            where: { email: normalizedEmail }
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "No account found with this email address"
+            });
+        }
+
+        if (user.isVerified) {
+            return res.status(400).json({
+                success: false,
+                message: "This email address is already verified"
+            });
+        }
+
+        const verificationToken =
+            crypto.randomBytes(32).toString("hex");
+
+        const verificationTokenExpires =
+            new Date(Date.now() + 15 * 60 * 1000);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                verificationToken,
+                verificationTokenExpires
+            }
+        });
+
+        const verificationLink =
+            `${process.env.APP_URL}/api/users/verify-email?token=${verificationToken}`;
+
+        await sendEmail(
+            user.email,
+            "Verify Your Email Address",
+            `
+                <h2>Email Verification</h2>
+                <p>Hello ${user.name},</p>
+                <p>Please click the link below to verify your email address:</p>
+                <a href="${verificationLink}">Verify My Email</a>
+                <p>This link expires in 15 minutes.</p>
+            `
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "A new verification email has been sent. Please check your inbox."
+        });
+
+    } catch (error) {
+        console.error("Resend verification email error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Something went wrong while resending the verification email"
+        });
+    }
+};
+
+
 const updateUserProfile = async (req, res) => {
     try {
         const { name, phone } = req.body;
@@ -474,6 +550,7 @@ module.exports = {
     loginUser,
     getProfile,
     verifyEmail,
+    resendVerificationEmail,
     updateUserProfile,
     deleteUserAccount,
     uploadProfileImage,
